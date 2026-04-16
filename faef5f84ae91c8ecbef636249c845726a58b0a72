@@ -1,0 +1,107 @@
+apps/server/src/lib/constants.ts
+  fe7cf59c8c90fa93 1
+docs/phase-plan.md
+  fe7cf59c8c90fa93 1
+apps/web/vercel.json
+  fe7cf59c8c90fa93 2
+apps/server/src/lib/activity.ts
+  fe7cf59c8c90fa93 1
+apps/server/src/lib/types.ts
+  fe7cf59c8c90fa93 1
+apps/server/Dockerfile
+  fe7cf59c8c90fa93 17-18,20,30
+docs/planner-phase2-assessment.md
+  fe7cf59c8c90fa93 1
+docs/planner-phase-gate.md
+  fe7cf59c8c90fa93 1,7-9
+apps/web/src/app/layout.tsx
+  fe7cf59c8c90fa93 5
+apps/web/src/components/session-workspace.tsx
+  fe7cf59c8c90fa93 3-4,20-21,433
+apps/server/src/lib/env.ts
+  fe7cf59c8c90fa93 27
+apps/server/src/lib/mcp-server.ts
+  fe7cf59c8c90fa93 1-2,23,27,51,97
+docs/design-mockup.html
+  fe7cf59c8c90fa93 6-86
+apps/server/src/lib/mcp.test.ts
+  fe7cf59c8c90fa93 10
+reports/phase4-verification-plan.md
+  fe7cf59c8c90fa93 3
+tsconfig.base.json
+  fe7cf59c8c90fa93 17-18
+apps/server/package.json
+  fe7cf59c8c90fa93 2,15
+apps/server/src/index.ts
+  fe7cf59c8c90fa93 3,139
+LICENSE
+  fe7cf59c8c90fa93 3
+apps/server/src/lib/session-manager.ts
+  fe7cf59c8c90fa93 1
+packages/shared/src/index.ts
+  fe7cf59c8c90fa93 1
+package.json
+  fe7cf59c8c90fa93 2,10
+apps/server/src/lib/mcp.ts
+  fe7cf59c8c90fa93 1
+apps/server/.env.example
+  fe7cf59c8c90fa93 2
+docs/ui-redesign-spec.md
+  fe7cf59c8c90fa93 51,98,178,223,225,236
+  beecb793b04ae5d6 1-50,52-97,99-177,179-222,224,226-235,237-263
+docs/shared-contracts.md
+  fe7cf59c8c90fa93 1
+apps/server/src/lib/websocket.test.ts
+  fe7cf59c8c90fa93 122
+packages/shared/package.json
+  fe7cf59c8c90fa93 2
+apps/server/src/lib/session-manager.test.ts
+  fe7cf59c8c90fa93 4,26
+apps/server/src/index.test.ts
+  fe7cf59c8c90fa93 17,81,95
+apps/server/src/lib/health.test.ts
+  fe7cf59c8c90fa93 7
+README.md
+  fe7cf59c8c90fa93 1,3,60,89-90,106-108,114-116
+apps/web/src/components/landing-page-client.tsx
+  fe7cf59c8c90fa93 6
+apps/web/package.json
+  fe7cf59c8c90fa93 2,19
+.gitignore
+  fe7cf59c8c90fa93 141
+fly.toml
+  fe7cf59c8c90fa93 1,9,19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "faef5f84ae91c8ecbef636249c845726a58b0a72",
+  "prompts": {
+    "beecb793b04ae5d6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "60427526-396c-4ef4-ba78-847e76f541ec",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Donovan Yohan",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 274,
+      "overriden_lines": 0
+    },
+    "fe7cf59c8c90fa93": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c28c1643-765c-4f7c-943f-ee486314614c",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Donovan Yohan",
+      "messages": [],
+      "total_additions": 82,
+      "total_deletions": 80,
+      "accepted_lines": 77,
+      "overriden_lines": 0
+    }
+  }
+}
