@@ -1,4 +1,4 @@
-import type { ListSessionsOutput, Participant, ReadDiagramInput, ReadDiagramOutput, WriteDiagramInput, WriteDiagramOutput } from '@mermaidflow/shared';
+import type { ListSessionsOutput, Participant, ReadDiagramInput, ReadDiagramOutput, WriteDiagramInput, WriteDiagramOutput } from '@arielcharts/shared';
 import { createActivityEvent } from './activity.js';
 import { assertValidSessionId } from './session-id.js';
 import type { SessionManager } from './session-manager.js';

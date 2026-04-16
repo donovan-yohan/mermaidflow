@@ -1,4 +1,4 @@
-# MermaidFlow shared contracts
+# ArielCharts shared contracts
 
 ## Session identifier
 - Format: URL path `/s/:id`

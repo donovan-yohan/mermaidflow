@@ -1,6 +1,6 @@
 # Phase 4 verification plan
 
-Repo: MermaidFlow
+Repo: ArielCharts
 Prepared during Phase 3 kickoff, then refreshed after the Phase 2 + 3 implementation landed and Phase 4 hardening began.
 
 ## Current state snapshot

@@ -1,14 +1,13 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { APP_NAME } from '@mermaidflow/shared';
+import { APP_NAME } from '@arielcharts/shared';
 import { getSessionPath, isValidSessionId, randomSessionId } from '../lib/session';
 
-export function LandingPageClient() {
+export function LandingPageClient({ suggestedSessionId }: { suggestedSessionId: string }) {
   const router = useRouter();
-  const suggestedSessionId = useMemo(() => randomSessionId(), []);
   const [joinId, setJoinId] = useState('');
   const normalizedJoinId = joinId.trim().toLowerCase();
   const joinIdIsValid = normalizedJoinId.length === 0 || isValidSessionId(normalizedJoinId);

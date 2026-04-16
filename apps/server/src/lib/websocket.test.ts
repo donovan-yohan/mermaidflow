@@ -119,7 +119,7 @@ describe('SessionWebSocketServer', () => {
   let port: number;
 
   beforeEach(async () => {
-    dataDir = await mkdtemp(join(tmpdir(), 'mermaidflow-websocket-'));
+    dataDir = await mkdtemp(join(tmpdir(), 'arielcharts-websocket-'));
     const env: ServerEnv = {
       port: 0,
       dataDir,

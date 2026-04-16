@@ -2,6 +2,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from './index.js';
 import type { ServerEnv } from './lib/types.js';
@@ -12,7 +14,7 @@ describe('server integration', () => {
   let port: number;
 
   beforeEach(async () => {
-    dataDir = await mkdtemp(join(tmpdir(), 'mermaidflow-server-'));
+    dataDir = await mkdtemp(join(tmpdir(), 'arielcharts-server-'));
     const env: ServerEnv = {
       port: 0,
       dataDir,
@@ -34,49 +36,27 @@ describe('server integration', () => {
     await rm(dataDir, { recursive: true, force: true });
   });
 
-  it('rejects disallowed origins and malformed MCP payloads', async () => {
-    const disallowedResponse = await fetch(`http://127.0.0.1:${port}/mcp`, {
+  it('rejects disallowed origins for the MCP endpoint', async () => {
+    const response = await fetch(`http://127.0.0.1:${port}/mcp`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         origin: 'http://blocked.test',
       },
-      body: JSON.stringify({ tool: 'list_sessions', input: {} }),
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2025-06-18',
+          capabilities: {},
+          clientInfo: { name: 'blocked-client', version: '1.0.0' },
+        },
+      }),
     });
 
-    expect(disallowedResponse.status).toBe(403);
-    await expect(disallowedResponse.json()).resolves.toEqual({ error: 'Origin not allowed.' });
-
-    const emptyResponse = await fetch(`http://127.0.0.1:${port}/mcp`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        origin: 'http://allowed.test',
-      },
-      body: '',
-    });
-
-    expect(emptyResponse.status).toBe(400);
-    expect(emptyResponse.headers.get('access-control-allow-origin')).toBe('http://allowed.test');
-    expect(emptyResponse.headers.get('access-control-allow-methods')).toBe('POST, OPTIONS');
-    expect(emptyResponse.headers.get('access-control-allow-headers')).toBe('content-type');
-    await expect(emptyResponse.json()).resolves.toEqual({
-      error: 'Expected non-empty string field: tool',
-    });
-
-    const invalidJsonResponse = await fetch(`http://127.0.0.1:${port}/mcp`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        origin: 'http://allowed.test',
-      },
-      body: '{',
-    });
-
-    expect(invalidJsonResponse.status).toBe(400);
-    expect(invalidJsonResponse.headers.get('access-control-allow-origin')).toBe('http://allowed.test');
-    const invalidJsonPayload = await invalidJsonResponse.json();
-    expect(invalidJsonPayload.error).toContain('JSON');
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: 'Origin not allowed.' });
   });
 
   it('handles allowed MCP preflight requests', async () => {
@@ -84,7 +64,7 @@ describe('server integration', () => {
       method: 'OPTIONS',
       headers: {
         origin: 'http://allowed.test',
-        'access-control-request-headers': 'content-type,x-mermaidflow-client',
+        'access-control-request-headers': 'content-type,mcp-protocol-version',
       },
     });
 
@@ -92,7 +72,81 @@ describe('server integration', () => {
     expect(await response.text()).toBe('');
     expect(response.headers.get('access-control-allow-origin')).toBe('http://allowed.test');
     expect(response.headers.get('access-control-allow-methods')).toBe('POST, OPTIONS');
-    expect(response.headers.get('access-control-allow-headers')).toBe('content-type,x-mermaidflow-client');
+    expect(response.headers.get('access-control-allow-headers')).toBe('content-type,mcp-protocol-version');
     expect(response.headers.get('access-control-max-age')).toBe('86400');
+  });
+
+  it('supports MCP initialize, tools/list, and tools/call flows over streamable HTTP', async () => {
+    const client = new Client({
+      name: 'arielcharts-server-test',
+      version: '1.0.0',
+    });
+
+    const transport = new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`), {
+      requestInit: {
+        headers: {
+          origin: 'http://allowed.test',
+        },
+      },
+    });
+
+    await client.connect(transport);
+
+    expect(client.getServerVersion()).toEqual({ name: 'ArielCharts', version: '0.1.0' });
+    expect(client.getServerCapabilities()).toMatchObject({ tools: {} });
+
+    const tools = await client.listTools();
+    expect(tools.tools.map((tool) => tool.name)).toEqual(['read_diagram', 'write_diagram', 'list_sessions']);
+
+    const writeResult = await client.callTool({
+      name: 'write_diagram',
+      arguments: {
+        session_id: 'abc123de',
+        mermaid_text: 'graph TD\n  Browser-->Server',
+        actor_name: 'claude-code',
+        actor_type: 'agent',
+        detail: 'updated over MCP',
+      },
+    });
+
+    expect(writeResult.isError).toBeUndefined();
+    expect(writeResult.structuredContent).toEqual({ success: true });
+
+    const readResult = await client.callTool({
+      name: 'read_diagram',
+      arguments: {
+        session_id: 'abc123de',
+      },
+    });
+
+    expect(readResult.isError).toBeUndefined();
+    expect(readResult.structuredContent).toEqual({
+      mermaid_text: 'graph TD\n  Browser-->Server',
+      participants: [
+        {
+          name: 'claude-code',
+          color: '#7c3aed',
+          type: 'agent',
+        },
+      ],
+    });
+
+    const sessionsResult = await client.callTool({
+      name: 'list_sessions',
+      arguments: {},
+    });
+
+    expect(sessionsResult.isError).toBeUndefined();
+    expect(sessionsResult.structuredContent).toEqual({
+      sessions: [
+        {
+          id: 'abc123de',
+          title: 'graph TD',
+          participants: 1,
+        },
+      ],
+    });
+
+    await transport.close();
   });
 });

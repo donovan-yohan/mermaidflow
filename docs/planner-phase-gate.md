@@ -1,12 +1,12 @@
-# MermaidFlow planner phase gate
+# ArielCharts planner phase gate
 
 ## Phase 2 gate decision
 Status: **greenlit for Phase 3 frontend integration**
 
 ### Evidence checked
-- `pnpm --filter @mermaidflow/server test`
-- `pnpm --filter @mermaidflow/server typecheck`
-- `pnpm --filter @mermaidflow/server build`
+- `pnpm --filter @arielcharts/server test`
+- `pnpm --filter @arielcharts/server typecheck`
+- `pnpm --filter @arielcharts/server build`
 
 All passed after Phase 2 hardening.
 

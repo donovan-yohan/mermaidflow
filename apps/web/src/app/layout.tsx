@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'MermaidFlow',
+  title: 'ArielCharts',
   description: 'Collaborative Mermaid diagrams with MCP agent integration.',
 };
 

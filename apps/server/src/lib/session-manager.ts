@@ -1,4 +1,4 @@
-import type { ActivityEvent, AwarenessState, Participant, SessionSummary } from '@mermaidflow/shared';
+import type { ActivityEvent, AwarenessState, Participant, SessionSummary } from '@arielcharts/shared';
 import * as encoding from 'lib0/encoding';
 import { Awareness, applyAwarenessUpdate, removeAwarenessStates } from 'y-protocols/awareness';
 import * as Y from 'yjs';

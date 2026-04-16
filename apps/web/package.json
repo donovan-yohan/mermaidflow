@@ -1,5 +1,5 @@
 {
-  "name": "@mermaidflow/web",
+  "name": "@arielcharts/web",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -16,7 +16,7 @@
     "@codemirror/lang-markdown": "6.3.3",
     "@codemirror/state": "6.5.2",
     "@codemirror/view": "6.38.6",
-    "@mermaidflow/shared": "workspace:*",
+    "@arielcharts/shared": "workspace:*",
     "codemirror": "6.0.2",
     "mermaid": "11.12.0",
     "next": "16.2.4",

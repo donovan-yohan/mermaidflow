@@ -24,7 +24,7 @@ export function parseAllowedOrigins(raw: string | undefined): string[] {
 export function loadServerEnv(env: NodeJS.ProcessEnv = process.env): ServerEnv {
   return {
     port: parseNumber(env.PORT, 4000),
-    dataDir: env.DATA_DIR ?? '.data/mermaidflow',
+    dataDir: env.DATA_DIR ?? '.data/arielcharts',
     cleanupIntervalMs: parseNumber(env.CLEANUP_INTERVAL_MS, DEFAULT_CLEANUP_INTERVAL_MS),
     sessionTtlMs: parseNumber(env.SESSION_TTL_MS, DEFAULT_SESSION_TTL_MS),
     allowedOrigins: parseAllowedOrigins(env.ALLOWED_ORIGINS),
