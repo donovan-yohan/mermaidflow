@@ -1,8 +1,8 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { pathToFileURL } from 'node:url';
 import { healthResponse } from './lib/health.js';
-import { createCorsHeaders, sendEmpty, sendJson, readJsonBody } from './lib/http.js';
-import { handleMcpToolCall } from './lib/mcp.js';
+import { createCorsHeaders, sendEmpty, sendJson } from './lib/http.js';
+import { handleMcpStreamableHttpRequest } from './lib/mcp-server.js';
 import { isOriginAllowed } from './lib/origin.js';
 import { SessionStore } from './lib/persistence.js';
 import { SessionManager } from './lib/session-manager.js';
@@ -48,22 +48,46 @@ export function createApp(env = loadServerEnv()) {
       }
 
       if (request.method === 'POST') {
+        for (const [key, value] of Object.entries(corsHeaders)) {
+          if (value !== undefined) {
+            response.setHeader(key, value);
+          }
+        }
+
         try {
-          const body = await readJsonBody(request);
-          const result = await handleMcpToolCall(manager, body);
-          sendJson(response, 200, { result }, corsHeaders);
+          await handleMcpStreamableHttpRequest({ manager, request, response });
         } catch (error) {
           sendJson(
             response,
-            400,
+            500,
             {
-              error: error instanceof Error ? error.message : 'Unknown MCP error.',
+              jsonrpc: '2.0',
+              error: {
+                code: -32603,
+                message: error instanceof Error ? error.message : 'Internal MCP server error.',
+              },
+              id: null,
             },
             corsHeaders,
           );
         }
         return;
       }
+
+      sendJson(
+        response,
+        405,
+        {
+          jsonrpc: '2.0',
+          error: {
+            code: -32000,
+            message: 'Method not allowed.',
+          },
+          id: null,
+        },
+        corsHeaders,
+      );
+      return;
     }
 
     sendJson(response, 404, { error: 'Not found.' });

@@ -13,11 +13,13 @@
   },
   "dependencies": {
     "@mermaidflow/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.29.0",
     "level": "10.0.0",
     "lib0": "^0.2.117",
     "ws": "8.18.3",
     "y-protocols": "^1.0.7",
-    "yjs": "13.6.27"
+    "yjs": "13.6.27",
+    "zod": "4.3.6"
   },
   "devDependencies": {
     "@types/node": "24.6.0",
