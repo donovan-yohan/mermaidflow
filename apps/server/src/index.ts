@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { pathToFileURL } from 'node:url';
 import { healthResponse } from './lib/health.js';
-import { sendJson, readJsonBody } from './lib/http.js';
+import { createCorsHeaders, sendEmpty, sendJson, readJsonBody } from './lib/http.js';
 import { handleMcpToolCall } from './lib/mcp.js';
 import { isOriginAllowed } from './lib/origin.js';
 import { SessionStore } from './lib/persistence.js';
@@ -14,7 +15,9 @@ export function createApp(env = loadServerEnv()) {
   const websocketServer = new SessionWebSocketServer(manager);
 
   const cleanupTimer = setInterval(() => {
-    void manager.cleanupExpiredSessions({ ttlMs: env.sessionTtlMs });
+    void manager.cleanupExpiredSessions({ ttlMs: env.sessionTtlMs }).catch((error) => {
+      console.error('Failed to clean up expired sessions:', error);
+    });
   }, env.cleanupIntervalMs);
 
   const server = createServer(async (request: IncomingMessage, response: ServerResponse) => {
@@ -25,22 +28,42 @@ export function createApp(env = loadServerEnv()) {
       return;
     }
 
-    if (pathname === '/mcp' && request.method === 'POST') {
+    if (pathname === '/mcp') {
       if (!isOriginAllowed(request.headers.origin, env.allowedOrigins)) {
         sendJson(response, 403, { error: 'Origin not allowed.' });
         return;
       }
 
-      try {
-        const body = await readJsonBody(request);
-        const result = await handleMcpToolCall(manager, body);
-        sendJson(response, 200, { result });
-      } catch (error) {
-        sendJson(response, 400, {
-          error: error instanceof Error ? error.message : 'Unknown MCP error.',
-        });
+      const corsHeaders = createCorsHeaders(
+        request.headers.origin,
+        env.allowedOrigins,
+        typeof request.headers['access-control-request-headers'] === 'string'
+          ? request.headers['access-control-request-headers']
+          : undefined,
+      );
+
+      if (request.method === 'OPTIONS') {
+        sendEmpty(response, 204, corsHeaders);
+        return;
       }
-      return;
+
+      if (request.method === 'POST') {
+        try {
+          const body = await readJsonBody(request);
+          const result = await handleMcpToolCall(manager, body);
+          sendJson(response, 200, { result }, corsHeaders);
+        } catch (error) {
+          sendJson(
+            response,
+            400,
+            {
+              error: error instanceof Error ? error.message : 'Unknown MCP error.',
+            },
+            corsHeaders,
+          );
+        }
+        return;
+      }
     }
 
     sendJson(response, 404, { error: 'Not found.' });
@@ -81,7 +104,7 @@ export function createApp(env = loadServerEnv()) {
   return { server, manager, close };
 }
 
-const isMainModule = process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href;
+const isMainModule = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMainModule) {
   const env = loadServerEnv();

@@ -165,7 +165,7 @@ export class SessionManager {
     };
   }
 
-  async writeDiagram(sessionId: string, mermaidText: string, event: ActivityEvent, participants: Participant[] = []): Promise<void> {
+  async writeDiagram(sessionId: string, mermaidText: string, event: ActivityEvent, participants?: Participant[]): Promise<void> {
     const session = await this.getOrCreateSession(sessionId);
     const now = Date.now();
     session.lastAccessedAt = now;
@@ -178,7 +178,7 @@ export class SessionManager {
       writeActivity(session.doc, activity.slice(-100));
     }, MANAGED_AWARENESS_ORIGIN);
 
-    if (participants.length > 0) {
+    if (participants !== undefined) {
       this.setManagedParticipants(session, participants);
     }
 
@@ -302,14 +302,12 @@ export class SessionManager {
   }
 
   private snapshot(session: SessionState): SessionSnapshot {
-    syncParticipantsFromAwareness(session);
-
     return {
       id: session.id,
       title: titleFromMermaidText(readMermaidText(session.doc)),
       mermaidText: readMermaidText(session.doc),
       activity: readActivity(session.doc),
-      participants: readParticipants(session.doc),
+      participants: readParticipantsFromAwareness(session.awareness),
       updatedAt: session.updatedAt,
     };
   }

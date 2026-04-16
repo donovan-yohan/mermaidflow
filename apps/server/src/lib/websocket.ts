@@ -52,20 +52,23 @@ export class SessionWebSocketServer {
 
   constructor(private readonly manager: SessionManager) {
     this.wss.on('connection', (socket: WebSocket, _request: IncomingMessage, sessionId: string) => {
-      void this.handleConnection(socket, sessionId);
+      void this.handleConnection(socket, sessionId).catch((error) => {
+        console.error('WebSocket connection handling failed:', error);
+        socket.close();
+      });
       socket.on('error', () => {
         socket.close();
       });
-      socket.on('close', async () => {
-        await this.handleClose(socket, sessionId);
+      socket.on('close', () => {
+        void this.handleClose(socket, sessionId).catch((error) => {
+          console.error('WebSocket close handling failed:', error);
+        });
       });
-      socket.on('message', async (message: RawData) => {
-        try {
-          await this.handleMessage(sessionId, message, socket);
-        } catch (error) {
+      socket.on('message', (message: RawData) => {
+        void this.handleMessage(sessionId, message, socket).catch((error) => {
           console.error('WebSocket message handling failed:', error);
           socket.close();
-        }
+        });
       });
     });
   }
@@ -107,6 +110,9 @@ export class SessionWebSocketServer {
 
   private async handleConnection(socket: WebSocket, sessionId: string): Promise<void> {
     const session = await this.manager.getOrCreateSession(sessionId);
+    if (socket.readyState !== WebSocket.OPEN) {
+      return;
+    }
     this.ensureSocketRegistered(session, socket);
     socket.send(Buffer.from(encodeMessage(MESSAGE_TYPE_SYNC, (encoderInstance) => {
       syncProtocol.writeSyncStep1(encoderInstance, session.doc);
