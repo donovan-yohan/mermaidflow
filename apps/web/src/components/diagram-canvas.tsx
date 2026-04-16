@@ -115,6 +115,7 @@ export function DiagramCanvas({
   svg,
 }: DiagramCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const nodeButtonRefs = useRef(new Map<string, HTMLButtonElement | null>());
   const dragStateRef = useRef<{ originX: number; originY: number; startPanX: number; startPanY: number } | null>(null);
   const isControlledSelection = selectedNodeIds !== undefined;
   const [internalSelection, setInternalSelection] = useState<string[]>(selectedNodeIds ?? []);
@@ -135,6 +136,28 @@ export function DiagramCanvas({
   const [groupPromptValue, setGroupPromptValue] = useState('');
   const [showGroupPrompt, setShowGroupPrompt] = useState(false);
   const [selectedConnectionType, setSelectedConnectionType] = useState<DiagramLinkType>('arrow_point');
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  const [toolbarOpen, setToolbarOpen] = useState(false);
+
+  const orderedNodeIds = useMemo(() => {
+    if (graph?.nodes.length) {
+      return graph.nodes.map((node) => node.id).filter((nodeId) => hitMap?.nodes.has(nodeId) ?? false);
+    }
+
+    return hitMap ? [...hitMap.nodes.keys()] : [];
+  }, [graph?.nodes, hitMap]);
+
+  const connectionMap = useMemo(() => {
+    const incoming = new Map<string, string[]>();
+    const outgoing = new Map<string, string[]>();
+
+    graph?.links.forEach((link) => {
+      outgoing.set(link.source, [...(outgoing.get(link.source) ?? []), link.target]);
+      incoming.set(link.target, [...(incoming.get(link.target) ?? []), link.source]);
+    });
+
+    return { incoming, outgoing };
+  }, [graph?.links]);
 
   const selectedBounds = useMemo(() => {
     if (!hitMap || selection.length === 0) {
@@ -266,6 +289,77 @@ export function DiagramCanvas({
     setViewport({ panX, panY, zoom });
   }, [graphBounds]);
 
+  const focusNode = useCallback((nodeId: string | null) => {
+    if (!nodeId) {
+      return;
+    }
+
+    setFocusedNodeId(nodeId);
+    window.requestAnimationFrame(() => {
+      nodeButtonRefs.current.get(nodeId)?.focus();
+    });
+  }, []);
+
+  const moveFocus = useCallback((currentNodeId: string, direction: 'up' | 'down' | 'left' | 'right') => {
+    if (!hitMap) {
+      return;
+    }
+
+    const currentBounds = hitMap.nodes.get(currentNodeId);
+    if (!currentBounds) {
+      return;
+    }
+
+    const currentCenter = getBoundsCenter(currentBounds);
+    const directionalCandidates = direction === 'left' || direction === 'up'
+      ? connectionMap.incoming.get(currentNodeId) ?? []
+      : connectionMap.outgoing.get(currentNodeId) ?? [];
+    const connectedCandidates = Array.from(new Set([
+      ...directionalCandidates,
+      ...(connectionMap.incoming.get(currentNodeId) ?? []),
+      ...(connectionMap.outgoing.get(currentNodeId) ?? []),
+    ])).filter((candidateId) => candidateId !== currentNodeId && hitMap.nodes.has(candidateId));
+
+    const ranked = connectedCandidates
+      .map((candidateId) => {
+        const bounds = hitMap.nodes.get(candidateId);
+        if (!bounds) {
+          return null;
+        }
+
+        const center = getBoundsCenter(bounds);
+        const dx = center.x - currentCenter.x;
+        const dy = center.y - currentCenter.y;
+        const matchesDirection = (
+          (direction === 'right' && dx > 0)
+          || (direction === 'left' && dx < 0)
+          || (direction === 'down' && dy > 0)
+          || (direction === 'up' && dy < 0)
+        );
+        const primaryDistance = direction === 'left' || direction === 'right' ? Math.abs(dx) : Math.abs(dy);
+        const crossDistance = direction === 'left' || direction === 'right' ? Math.abs(dy) : Math.abs(dx);
+
+        return {
+          candidateId,
+          crossDistance,
+          matchesDirection,
+          primaryDistance,
+        };
+      })
+      .filter((candidate): candidate is { candidateId: string; crossDistance: number; matchesDirection: boolean; primaryDistance: number } => candidate !== null)
+      .sort((left, right) => {
+        if (left.matchesDirection !== right.matchesDirection) {
+          return left.matchesDirection ? -1 : 1;
+        }
+        if (left.primaryDistance !== right.primaryDistance) {
+          return left.primaryDistance - right.primaryDistance;
+        }
+        return left.crossDistance - right.crossDistance;
+      });
+
+    focusNode(ranked[0]?.candidateId ?? null);
+  }, [connectionMap.incoming, connectionMap.outgoing, focusNode, hitMap]);
+
   useEffect(() => {
     if (!selectedNodeIds) {
       return;
@@ -279,6 +373,28 @@ export function DiagramCanvas({
       setInternalMode(interactionMode);
     }
   }, [interactionMode]);
+
+  useEffect(() => {
+    if (selection.length === 0) {
+      setToolbarOpen(false);
+      return;
+    }
+
+    if (!selection.includes(focusedNodeId ?? '')) {
+      setFocusedNodeId(selection[0] ?? null);
+    }
+  }, [focusedNodeId, selection]);
+
+  useEffect(() => {
+    if (!orderedNodeIds.length) {
+      setFocusedNodeId(null);
+      return;
+    }
+
+    if (!focusedNodeId || !orderedNodeIds.includes(focusedNodeId)) {
+      setFocusedNodeId(orderedNodeIds[0] ?? null);
+    }
+  }, [focusedNodeId, orderedNodeIds]);
 
   useEffect(() => {
     if (!graphBounds || !svg) {
@@ -304,6 +420,10 @@ export function DiagramCanvas({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (isTypingElement(event.target)) {
+        return;
+      }
+
       if (event.code === 'Space') {
         setSpacePressed(true);
       }
@@ -315,7 +435,9 @@ export function DiagramCanvas({
         setShowGroupPrompt(false);
         setConnectSourceId(null);
         setCursorPoint(null);
+        setToolbarOpen(false);
         setMode('select');
+        containerRef.current?.focus();
       }
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'g' && selection.length > 0 && !readOnly) {
@@ -336,15 +458,6 @@ export function DiagramCanvas({
       if ((event.key === 'Delete' || event.key === 'Backspace') && selection.length > 0 && !readOnly) {
         event.preventDefault();
         onDeleteNodes?.(selection);
-      }
-
-      if (event.key === 'Enter' && selection.length === 1 && !editingNodeId && !readOnly) {
-        event.preventDefault();
-        const selectedNode = graph?.nodes.find((node) => node.id === selection[0]);
-        if (selectedNode) {
-          setEditingNodeId(selectedNode.id);
-          setEditingLabel(selectedNode.text?.text ?? selectedNode.id);
-        }
       }
     };
 
@@ -447,12 +560,15 @@ export function DiagramCanvas({
     }
 
     setSelection([]);
+    setToolbarOpen(false);
     setShapePickerOpen(false);
     setEditingNodeId(null);
   }, [isPanning, setSelection]);
 
   const handleNodeClick = useCallback((nodeId: string, shiftKey: boolean) => {
     setShapePickerOpen(false);
+    setFocusedNodeId(nodeId);
+    setToolbarOpen(true);
 
     if (mode === 'connect') {
       if (!connectSourceId) {
@@ -510,8 +626,9 @@ export function DiagramCanvas({
   }, [onAddEdge, pendingEdge, selectedConnectionType, setMode]);
 
   const openNodeEditor = useCallback((node: DiagramNode) => {
+    setToolbarOpen(false);
     setEditingNodeId(node.id);
-    setEditingLabel(node.text?.text ?? node.id);
+    setEditingLabel(getNodeText(node));
   }, []);
 
   const transformStyle: CSSProperties = {
@@ -539,6 +656,11 @@ export function DiagramCanvas({
       onPointerMove={handlePointerMove}
       onPointerUp={stopPanning}
       onWheel={handleWheel}
+      onFocus={(event) => {
+        if (event.target === event.currentTarget && orderedNodeIds[0]) {
+          focusNode(orderedNodeIds[0]);
+        }
+      }}
       ref={containerRef}
       role="application"
       style={{
@@ -566,13 +688,15 @@ export function DiagramCanvas({
             {[...hitMap.nodes.entries()].map(([nodeId, bounds]) => {
               const node = graph?.nodes.find((candidate) => candidate.id === nodeId) ?? null;
               const selected = selection.includes(nodeId);
-              const ariaLabel = `${node?.shape ?? 'node'}: ${node?.text?.text ?? nodeId}`;
+              const focused = focusedNodeId === nodeId;
+              const ariaLabel = `${node?.shape ?? 'node'}: ${node ? getNodeText(node) : nodeId}`;
 
               return (
                 <button
                   aria-label={ariaLabel}
                   className="diagram-node-target"
                   key={nodeId}
+                  onFocus={() => { setFocusedNodeId(nodeId); }}
                   onClick={(event) => {
                     event.stopPropagation();
                     handleNodeClick(nodeId, event.shiftKey);
@@ -584,12 +708,43 @@ export function DiagramCanvas({
                     }
                     openNodeEditor(node);
                   }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'ArrowUp') {
+                      event.preventDefault();
+                      moveFocus(nodeId, 'up');
+                    }
+                    if (event.key === 'ArrowDown') {
+                      event.preventDefault();
+                      moveFocus(nodeId, 'down');
+                    }
+                    if (event.key === 'ArrowLeft') {
+                      event.preventDefault();
+                      moveFocus(nodeId, 'left');
+                    }
+                    if (event.key === 'ArrowRight') {
+                      event.preventDefault();
+                      moveFocus(nodeId, 'right');
+                    }
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelection([nodeId]);
+                      setToolbarOpen(true);
+                    }
+                    if (event.key === 'Escape') {
+                      event.preventDefault();
+                      setToolbarOpen(false);
+                      containerRef.current?.focus();
+                    }
+                  }}
+                  ref={(element) => {
+                    nodeButtonRefs.current.set(nodeId, element);
+                  }}
                   role="button"
                   style={{
-                    background: selected ? 'rgba(56, 189, 248, 0.08)' : 'rgba(255, 255, 255, 0.01)',
-                    border: selected ? '2px solid #38bdf8' : '1px solid transparent',
+                    background: selected ? 'rgba(56, 189, 248, 0.08)' : focused ? 'rgba(148, 163, 184, 0.06)' : 'rgba(255, 255, 255, 0.01)',
+                    border: selected || focused ? '2px solid #38bdf8' : '1px solid transparent',
                     borderRadius: 12,
-                    boxShadow: selected ? '0 0 0 4px rgba(56,189,248,0.25)' : 'none',
+                    boxShadow: selected || focused ? '0 0 0 4px rgba(56,189,248,0.25)' : 'none',
                     cursor: readOnly ? 'default' : 'pointer',
                     height: bounds.height,
                     left: bounds.x,
@@ -599,6 +754,7 @@ export function DiagramCanvas({
                     top: bounds.y,
                     width: bounds.width,
                   }}
+                  tabIndex={focused ? 0 : -1}
                   type="button"
                 />
               );
@@ -706,7 +862,7 @@ export function DiagramCanvas({
           </div>
         ) : null)}
 
-        {isFlowchart && !readOnly ? (
+        {isFlowchart && !readOnly && toolbarOpen && selection.length > 0 ? (
           <div style={toolbarStyle}>
             {selection.length === 1 ? (
               <ToolbarButton label="Edit label" onClick={() => {
@@ -727,6 +883,7 @@ export function DiagramCanvas({
               setPendingEdge(null);
               setPendingEdgeLabel('');
               setConnectSourceId(null);
+              setToolbarOpen(true);
               setMode(mode === 'connect' ? 'select' : 'connect');
             }}>
               <ArrowRightFromLine size={16} />
@@ -997,6 +1154,21 @@ function ToolbarButton({ children, label, onClick }: { children: React.ReactNode
       {children}
     </button>
   );
+}
+
+function getNodeText(node: DiagramNode): string {
+  return typeof node.text === 'string' ? node.text : node.text?.text ?? node.id;
+}
+
+function isTypingElement(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return target instanceof HTMLInputElement
+    || target instanceof HTMLTextAreaElement
+    || target instanceof HTMLSelectElement
+    || target.isContentEditable;
 }
 
 function ShapePreview({ shape }: { shape: DiagramNodeShape }) {

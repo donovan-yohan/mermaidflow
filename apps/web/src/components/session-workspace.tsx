@@ -11,7 +11,10 @@ import { EditorView, keymap } from '@codemirror/view';
 import { yCollab, yUndoManagerKeymap } from 'y-codemirror.next';
 import { WebsocketProvider } from 'y-websocket';
 import * as Y from 'yjs';
+import { DiagramCanvas } from './diagram-canvas';
+import { MutationQueue, parseFlowchartSnapshot, type FlowchartSnapshot } from '../lib/diagram-mutations';
 import { getSessionPath, getWebsocketServerUrl } from '../lib/session';
+import { buildSvgHitMap, type SvgHitMap } from '../lib/svg-hit-map';
 
 const MERMAID_TEXT_KEY = 'mermaid';
 const ACTIVITY_KEY = 'activity';
@@ -131,11 +134,13 @@ function formatTimestamp(timestamp: number): string {
 }
 
 function getParticipantAvatarText(participant: Participant): string {
+  const displayName = stripParticipantTabSuffix(participant.name);
+
   if (participant.type === 'agent') {
     return 'AI';
   }
 
-  const words = participant.name
+  const words = displayName
     .trim()
     .split(/[^a-zA-Z0-9]+/)
     .filter(Boolean);
@@ -144,8 +149,33 @@ function getParticipantAvatarText(participant: Participant): string {
     return `${words[0]?.[0] ?? ''}${words[1]?.[0] ?? ''}`.toUpperCase();
   }
 
-  const compact = participant.name.replace(/[^a-zA-Z0-9]/g, '');
+  const compact = displayName.replace(/[^a-zA-Z0-9]/g, '');
   return compact.slice(0, 2).toUpperCase() || '??';
+}
+
+function stripParticipantTabSuffix(name: string): string {
+  return name.replace(/-[a-z0-9]{2}$/i, '');
+}
+
+function getParticipantDisplayName(participant: Participant): string {
+  return stripParticipantTabSuffix(participant.name);
+}
+
+function updateStoredIdentity(baseName: string, color: string) {
+  window.localStorage.setItem(
+    NAME_STORAGE_KEY,
+    JSON.stringify({ color, name: baseName, type: 'human' satisfies Participant['type'] }),
+  );
+}
+
+function renameIdentity(identity: LocalIdentity, baseName: string): LocalIdentity {
+  const trimmedBaseName = baseName.trim() || 'Human';
+  const tabSuffix = identity.name.match(/-([a-z0-9]{2})$/i)?.[1];
+
+  return {
+    ...identity,
+    name: tabSuffix ? `${trimmedBaseName}-${tabSuffix}` : trimmedBaseName,
+  };
 }
 
 function getParticipantBorderStyle(type: Participant['type']): 'solid' | 'dashed' {
@@ -206,6 +236,8 @@ export function SessionWorkspace({ sessionId }: { sessionId: string }) {
   const editDebounceRef = useRef<number | null>(null);
   const currentIdentityRef = useRef<LocalIdentity | null>(null);
   const addActivityRef = useRef<((action: ActivityEvent['action'], detail?: string) => void) | null>(null);
+  const hitMapMeasureRef = useRef<HTMLDivElement | null>(null);
+  const mutationQueueRef = useRef<MutationQueue | null>(null);
 
   const [collaboration, setCollaboration] = useState<CollaborationState | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
@@ -218,6 +250,12 @@ export function SessionWorkspace({ sessionId }: { sessionId: string }) {
   const [promptCopyState, setPromptCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const [shareUrl, setShareUrl] = useState(() => getSessionPath(sessionId));
   const [showConnectModal, setShowConnectModal] = useState(false);
+  const [flowchartSnapshot, setFlowchartSnapshot] = useState<FlowchartSnapshot | null>(null);
+  const [hitMap, setHitMap] = useState<SvgHitMap | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [interactionMode, setInteractionMode] = useState<'select' | 'connect'>('select');
+  const [renamingParticipantName, setRenamingParticipantName] = useState<string | null>(null);
+  const [displayNameDraft, setDisplayNameDraft] = useState('');
 
   useEffect(() => {
     setShareUrl(getSessionPath(sessionId));
@@ -239,6 +277,8 @@ export function SessionWorkspace({ sessionId }: { sessionId: string }) {
     });
     const awareness = provider.awareness as AwarenessLike;
     const yText = doc.getText(MERMAID_TEXT_KEY);
+    const queue = new MutationQueue(yText, { transactionOrigin: 'visual' });
+    mutationQueueRef.current = queue;
     const activityArray = doc.getArray<ActivityEvent>(ACTIVITY_KEY);
     const localIdentity = getOrCreateIdentity();
     currentIdentityRef.current = localIdentity;
@@ -333,6 +373,7 @@ export function SessionWorkspace({ sessionId }: { sessionId: string }) {
       doc.destroy();
       addActivityRef.current = null;
       currentIdentityRef.current = null;
+      mutationQueueRef.current = null;
       joinedActivityRef.current = false;
       setCollaboration(null);
     };
@@ -426,15 +467,21 @@ export function SessionWorkspace({ sessionId }: { sessionId: string }) {
         if (!isCancelled) {
           setRenderError(null);
           setLastValidSvg('');
+          setFlowchartSnapshot(null);
+          setHitMap(null);
+          setSelectedNodeIds([]);
+          setInteractionMode('select');
         }
         return;
       }
 
       try {
         await mermaid.parse(mermaidText);
+        const snapshot = parseFlowchartSnapshot(mermaidText);
         const { svg } = await mermaid.render(`arielcharts-${sessionId}-${renderId}`, mermaidText);
         if (!isCancelled) {
           setLastValidSvg(svg);
+          setFlowchartSnapshot(snapshot);
           setRenderError(null);
         }
       } catch (error) {
@@ -450,6 +497,30 @@ export function SessionWorkspace({ sessionId }: { sessionId: string }) {
       isCancelled = true;
     };
   }, [mermaidText, sessionId]);
+
+  useEffect(() => {
+    if (!lastValidSvg || !hitMapMeasureRef.current) {
+      if (!lastValidSvg) {
+        setHitMap(null);
+      }
+      return;
+    }
+
+    let frameId = 0;
+    frameId = window.requestAnimationFrame(() => {
+      const svgElement = hitMapMeasureRef.current?.querySelector('svg');
+      if (!svgElement) {
+        setHitMap(null);
+        return;
+      }
+
+      setHitMap(buildSvgHitMap(svgElement));
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [lastValidSvg]);
 
   useEffect(() => {
     if (copyState === 'idle') {
@@ -537,6 +608,23 @@ export function SessionWorkspace({ sessionId }: { sessionId: string }) {
   const shareButtonLabel = copyState === 'copied' ? 'copied' : copyState === 'error' ? 'copy failed' : 'share';
   const promptCopyLabel = promptCopyState === 'copied' ? 'copied' : promptCopyState === 'error' ? 'copy failed' : 'copy';
 
+  const commitDisplayName = useCallback(() => {
+    const currentIdentity = currentIdentityRef.current;
+    if (!currentIdentity || !collaboration) {
+      setRenamingParticipantName(null);
+      return;
+    }
+
+    const nextBaseName = displayNameDraft.trim() || 'Human';
+    const updatedIdentity = renameIdentity(currentIdentity, nextBaseName);
+
+    updateStoredIdentity(nextBaseName, updatedIdentity.color);
+    currentIdentityRef.current = updatedIdentity;
+    collaboration.awareness.setLocalStateField('user', updatedIdentity);
+    setDisplayNameDraft(stripParticipantTabSuffix(updatedIdentity.name));
+    setRenamingParticipantName(null);
+  }, [collaboration, displayNameDraft]);
+
   return (
     <main className="workspace-shell">
       <header className="workspace-topbar">
@@ -573,17 +661,67 @@ export function SessionWorkspace({ sessionId }: { sessionId: string }) {
             {participants.length > 0 ? (
               participants.map((participant, index) => (
                 <div
-                  className={`workspace-avatar workspace-avatar-${participant.type}`}
+                  className="workspace-avatar-stack-item"
                   key={`${participant.name}-${participant.type}`}
-                  style={{
-                    backgroundColor: participant.type === 'agent' ? '#0d1117' : participant.color,
-                    borderColor: participant.type === 'agent' ? '#3fb950' : '#0d1117',
-                    borderStyle: getParticipantBorderStyle(participant.type),
-                    zIndex: participants.length - index,
-                  }}
-                  title={participant.name}
                 >
-                  {getParticipantAvatarText(participant)}
+                  {participant.name === currentIdentityRef.current?.name ? (
+                    <>
+                      <button
+                        aria-expanded={renamingParticipantName === participant.name}
+                        aria-haspopup="dialog"
+                        className={`workspace-avatar workspace-avatar-${participant.type} workspace-avatar-button`}
+                        onClick={() => {
+                          const displayName = getParticipantDisplayName(participant);
+                          setDisplayNameDraft(displayName);
+                          setRenamingParticipantName((current) => current === participant.name ? null : participant.name);
+                        }}
+                        style={{
+                          backgroundColor: participant.type === 'agent' ? '#0d1117' : participant.color,
+                          borderColor: participant.type === 'agent' ? '#3fb950' : '#0d1117',
+                          borderStyle: getParticipantBorderStyle(participant.type),
+                          zIndex: participants.length - index,
+                        }}
+                        title={`${getParticipantDisplayName(participant)} (click to rename)`}
+                        type="button"
+                      >
+                        {getParticipantAvatarText(participant)}
+                      </button>
+
+                      {renamingParticipantName === participant.name ? (
+                        <div className="workspace-avatar-popover" role="dialog" aria-label="Rename display name">
+                          <input
+                            autoFocus
+                            className="workspace-avatar-input"
+                            onBlur={commitDisplayName}
+                            onChange={(event) => { setDisplayNameDraft(event.target.value); }}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                commitDisplayName();
+                              }
+                              if (event.key === 'Escape') {
+                                setDisplayNameDraft(getParticipantDisplayName(participant));
+                                setRenamingParticipantName(null);
+                              }
+                            }}
+                            value={displayNameDraft}
+                          />
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <div
+                      className={`workspace-avatar workspace-avatar-${participant.type}`}
+                      style={{
+                        backgroundColor: participant.type === 'agent' ? '#0d1117' : participant.color,
+                        borderColor: participant.type === 'agent' ? '#3fb950' : '#0d1117',
+                        borderStyle: getParticipantBorderStyle(participant.type),
+                        zIndex: participants.length - index,
+                      }}
+                      title={getParticipantDisplayName(participant)}
+                    >
+                      {getParticipantAvatarText(participant)}
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
@@ -618,15 +756,45 @@ export function SessionWorkspace({ sessionId }: { sessionId: string }) {
             </div>
           ) : null}
 
-          <div className="preview-surface">
-            {lastValidSvg ? (
-              <div dangerouslySetInnerHTML={{ __html: lastValidSvg }} />
-            ) : mermaidText.trim() ? (
-              <div className="empty-state">rendering preview…</div>
-            ) : (
-              <div className="empty-state">start typing mermaid syntax</div>
-            )}
-          </div>
+          <DiagramCanvas
+            className="diagram-canvas"
+            emptyMessage={mermaidText.trim() ? 'rendering preview…' : 'start typing mermaid syntax'}
+            graph={flowchartSnapshot}
+            hitMap={hitMap}
+            interactionMode={interactionMode}
+            isFlowchart={mermaidText.trimStart().startsWith('flowchart')}
+            onAddEdge={(source, target, label, type) => mutationQueueRef.current?.addEdge(source, target, { label, type })}
+            onAddNode={(label, shape) => mutationQueueRef.current?.addNode(label, { shape })}
+            onChangeNodeShape={(nodeId, shape) => mutationQueueRef.current?.changeNodeShape(nodeId, shape)}
+            onDeleteNodes={(ids) => {
+              for (const id of ids) {
+                void mutationQueueRef.current?.removeNode(id);
+              }
+            }}
+            onEditNodeLabel={(nodeId, label) => mutationQueueRef.current?.editNodeLabel(nodeId, label)}
+            onGroupNodes={(ids, label) => mutationQueueRef.current?.groupNodes(ids, label)}
+            onInteractionModeChange={setInteractionMode}
+            onSelectedNodeIdsChange={setSelectedNodeIds}
+            onUngroupNodes={(id) => mutationQueueRef.current?.ungroupSubgraph(id)}
+            selectedNodeIds={selectedNodeIds}
+            svg={lastValidSvg}
+          />
+
+          <div
+            aria-hidden="true"
+            dangerouslySetInnerHTML={{ __html: lastValidSvg }}
+            ref={hitMapMeasureRef}
+            style={{
+              height: 0,
+              inset: 0,
+              opacity: 0,
+              overflow: 'hidden',
+              pointerEvents: 'none',
+              position: 'absolute',
+              visibility: 'hidden',
+              width: 0,
+            }}
+          />
         </article>
       </section>
 
