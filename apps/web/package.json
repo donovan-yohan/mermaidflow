@@ -12,10 +12,19 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@codemirror/commands": "6.8.1",
+    "@codemirror/lang-markdown": "6.3.3",
+    "@codemirror/state": "6.5.2",
+    "@codemirror/view": "6.38.6",
     "@mermaidflow/shared": "workspace:*",
+    "codemirror": "6.0.2",
+    "mermaid": "11.12.0",
     "next": "15.5.0",
     "react": "19.1.1",
-    "react-dom": "19.1.1"
+    "react-dom": "19.1.1",
+    "y-codemirror.next": "0.3.5",
+    "y-websocket": "2.1.0",
+    "yjs": "13.6.27"
   },
   "devDependencies": {
     "@types/node": "24.6.0",

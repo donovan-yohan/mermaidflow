@@ -12,6 +12,6 @@ describe('session helpers', () => {
   });
 
   it('returns starter mermaid text', () => {
-    expect(getDefaultMermaidText()).toContain('graph TD');
+    expect(getDefaultMermaidText()).toContain('flowchart LR');
   });
 });
