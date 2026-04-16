@@ -670,10 +670,9 @@ export function DiagramCanvas({
       aria-label="Interactive diagram canvas"
       className={className}
       onClick={(event) => {
-        const target = event.target as HTMLElement;
-        if (!target.closest('button, input, select, [role="button"]')) {
-          handleCanvasClick();
-        }
+        if (!(event.target instanceof Element)) return;
+        if (event.target.closest('button, input, select, [role="button"]')) return;
+        handleCanvasClick();
       }}
       onDoubleClick={(event) => {
         if (event.target === containerRef.current) {
@@ -856,7 +855,7 @@ export function DiagramCanvas({
         ) : null}
       </div>
 
-      <div style={{ inset: 0, pointerEvents: 'none', position: 'absolute' }}>
+      <div onClick={(event) => { event.stopPropagation(); }} style={{ inset: 0, pointerEvents: 'none', position: 'absolute' }}>
         {(!hasGraphNodes && isFlowchart && !readOnly) ? (
           <div
             style={{
