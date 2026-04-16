@@ -1,0 +1,25 @@
+e2e-validate.ts
+  82a8265a6923f15f 1-159
+AGENTS.md
+  82a8265a6923f15f 45-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "75fd32ffe35b4c2a2b277c232232d751d9ef32bc",
+  "prompts": {
+    "82a8265a6923f15f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "409ba542-2a76-49e5-bdf2-9480ce07142f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Donovan Yohan",
+      "messages": [],
+      "total_additions": 140,
+      "total_deletions": 11,
+      "accepted_lines": 1182,
+      "overriden_lines": 0
+    }
+  }
+}
