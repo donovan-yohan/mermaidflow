@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { APP_NAME } from '@mermaidflow/shared';
 import { getSessionPath, isValidSessionId, randomSessionId } from '../lib/session';
@@ -39,9 +40,9 @@ export function LandingPageClient() {
           <button className="primary-button" type="button" onClick={handleCreate}>
             Create new session
           </button>
-          <a className="secondary-button" href={getSessionPath(suggestedSessionId)}>
+          <Link className="secondary-button" href={getSessionPath(suggestedSessionId)}>
             Open suggested session
-          </a>
+          </Link>
         </div>
 
         <div className="landing-hint">

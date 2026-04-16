@@ -147,11 +147,11 @@ function describeActivity(event: ActivityEvent): string {
 }
 
 function upsertActivity(activityArray: Y.Array<ActivityEvent>, event: ActivityEvent) {
-  const next = [...activityArray.toArray(), event].slice(-MAX_ACTIVITY_EVENTS);
-  if (activityArray.length > 0) {
-    activityArray.delete(0, activityArray.length);
+  activityArray.push([event]);
+  const overflow = activityArray.length - MAX_ACTIVITY_EVENTS;
+  if (overflow > 0) {
+    activityArray.delete(0, overflow);
   }
-  activityArray.insert(0, next);
 }
 
 export function SessionWorkspace({ sessionId }: { sessionId: string }) {
@@ -183,7 +183,7 @@ export function SessionWorkspace({ sessionId }: { sessionId: string }) {
   }, [sessionId]);
 
   useEffect(() => {
-    mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
+    mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'strict' });
   }, []);
 
   useEffect(() => {
@@ -352,7 +352,7 @@ export function SessionWorkspace({ sessionId }: { sessionId: string }) {
         editorThemeRef.current.of(editorTheme),
         yCollab(collaboration.yText, collaboration.awareness, { undoManager: new Y.UndoManager(collaboration.yText) }),
         EditorView.updateListener.of((update) => {
-          if (update.docChanged && update.view.hasFocus) {
+          if (update.docChanged && update.transactions.some((tr) => tr.isUserEvent('input'))) {
             handleLocalEdit();
           }
         }),
