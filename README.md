@@ -52,11 +52,7 @@ Default local values:
 
 ### Server
 
-Copy `apps/server/.env.example` to `apps/server/.env` and adjust as needed:
-
-```bash
-cp apps/server/.env.example apps/server/.env
-```
+The server reads configuration from environment variables with sensible defaults for local development. No `.env` file is needed for `pnpm dev`. To override values, export them in your shell or use a tool like `dotenv-cli`.
 
 Runtime variables used by `apps/server/src/lib/env.ts`:
 

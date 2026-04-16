@@ -50,13 +50,19 @@ export function createCorsHeaders(
   allowedOrigins: readonly string[],
   requestedHeaders: string | undefined,
 ): OutgoingHttpHeaders {
-  const allowOrigin = allowedOrigins.length === 0 || allowedOrigins.includes('*') ? '*' : origin;
+  const isWildcard = allowedOrigins.length === 0 || allowedOrigins.includes('*');
+  const allowOrigin = isWildcard ? '*' : origin;
 
-  return {
+  const headers: OutgoingHttpHeaders = {
     'access-control-allow-headers': requestedHeaders?.trim() ? requestedHeaders : 'content-type',
     'access-control-allow-methods': 'POST, OPTIONS',
-    'access-control-allow-origin': allowOrigin,
     'access-control-max-age': '86400',
-    vary: allowOrigin === '*' ? 'Access-Control-Request-Headers' : 'Origin, Access-Control-Request-Headers',
+    vary: isWildcard ? 'Access-Control-Request-Headers' : 'Origin, Access-Control-Request-Headers',
   };
+
+  if (allowOrigin) {
+    headers['access-control-allow-origin'] = allowOrigin;
+  }
+
+  return headers;
 }
