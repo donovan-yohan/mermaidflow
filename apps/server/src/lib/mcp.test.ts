@@ -7,7 +7,7 @@ import { SessionStore } from './persistence.js';
 import { SessionManager } from './session-manager.js';
 
 async function createManager() {
-  const dataDir = await mkdtemp(join(tmpdir(), 'mermaidflow-mcp-'));
+  const dataDir = await mkdtemp(join(tmpdir(), 'arielcharts-mcp-'));
   const store = new SessionStore(dataDir);
   const manager = new SessionManager(store);
   return {

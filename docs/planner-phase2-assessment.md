@@ -1,4 +1,4 @@
-# Planner assessment: MermaidFlow Phase 2 resume
+# Planner assessment: ArielCharts Phase 2 resume
 
 ## Repo state observed
 - `main` is at PR #1 scaffold commit (`e83f900`).

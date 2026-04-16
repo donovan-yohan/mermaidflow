@@ -1,4 +1,4 @@
-# MermaidFlow phased delivery plan
+# ArielCharts phased delivery plan
 
 ## Phase 1 — Scaffold and CI baseline
 Branch: `phase-1/scaffold`

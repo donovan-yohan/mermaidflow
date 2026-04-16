@@ -1,4 +1,4 @@
-app = 'mermaidflow-server'
+app = 'arielcharts-server'
 primary_region = 'sjc'
 
 [build]
@@ -6,7 +6,7 @@ primary_region = 'sjc'
 
 [env]
   PORT = '4000'
-  DATA_DIR = '/data/mermaidflow'
+  DATA_DIR = '/data/arielcharts'
 
 [http_service]
   internal_port = 4000
@@ -16,5 +16,5 @@ primary_region = 'sjc'
   min_machines_running = 0
 
 [[mounts]]
-  source = 'mermaidflow_data'
+  source = 'arielcharts_data'
   destination = '/data'

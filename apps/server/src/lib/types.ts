@@ -1,4 +1,4 @@
-import type { ActivityEvent, Participant, SessionSummary } from '@mermaidflow/shared';
+import type { ActivityEvent, Participant, SessionSummary } from '@arielcharts/shared';
 import type { IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
 import type { WebSocket } from 'ws';

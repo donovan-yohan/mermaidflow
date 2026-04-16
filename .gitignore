@@ -138,7 +138,7 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-# MermaidFlow local server data
+# ArielCharts local server data
 apps/server/.data/
 .vercel
 .env*.local

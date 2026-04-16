@@ -1,4 +1,4 @@
-export const APP_NAME = 'MermaidFlow';
+export { APP_NAME } from '@arielcharts/shared';
 export const MERMAID_TEXT_KEY = 'mermaid';
 export const ACTIVITY_KEY = 'activity';
 export const PRESENCE_KEY = 'presence';

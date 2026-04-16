@@ -1,4 +1,5 @@
-import type { ListSessionsOutput, ReadDiagramOutput, WriteDiagramOutput } from '@mermaidflow/shared';
+import type { ListSessionsOutput, ReadDiagramOutput, WriteDiagramOutput } from '@arielcharts/shared';
+import { APP_NAME } from '@arielcharts/shared';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -19,11 +20,11 @@ const sessionSummarySchema = z.object({
 });
 
 const readDiagramInputSchema = {
-  session_id: z.string().describe('MermaidFlow session identifier.'),
+  session_id: z.string().describe('ArielCharts session identifier.'),
 };
 
 const writeDiagramInputSchema = {
-  session_id: z.string().describe('MermaidFlow session identifier.'),
+  session_id: z.string().describe('ArielCharts session identifier.'),
   mermaid_text: z.string().describe('The full Mermaid diagram source to persist.'),
   actor_name: z.string().optional().describe('Optional display name for the actor making the change.'),
   actor_type: z.enum(['human', 'agent']).optional().describe('Optional actor type for activity logging.'),
@@ -47,7 +48,7 @@ function createToolResult(payload: unknown): {
 
 function createMcpServer(manager: SessionManager): McpServer {
   const server = new McpServer({
-    name: 'MermaidFlow',
+    name: APP_NAME,
     version: '0.1.0',
   });
 
@@ -93,7 +94,7 @@ function createMcpServer(manager: SessionManager): McpServer {
   server.registerTool(
     'list_sessions',
     {
-      description: 'List active MermaidFlow sessions with titles and participant counts.',
+      description: 'List active ArielCharts sessions with titles and participant counts.',
       inputSchema: {},
       outputSchema: {
         sessions: z.array(sessionSummarySchema),

@@ -3,7 +3,7 @@
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { APP_NAME } from '@mermaidflow/shared';
+import { APP_NAME } from '@arielcharts/shared';
 import { getSessionPath, isValidSessionId, randomSessionId } from '../lib/session';
 
 export function LandingPageClient({ suggestedSessionId }: { suggestedSessionId: string }) {

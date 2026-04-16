@@ -1,6 +1,6 @@
-# MermaidFlow
+# ArielCharts
 
-MermaidFlow is a collaborative Mermaid diagram editor with a Next.js web client, a Node.js realtime/MCP server, and shared TypeScript contracts.
+ArielCharts is a collaborative Mermaid diagram editor with a Next.js web client, a Node.js realtime/MCP server, and shared TypeScript contracts.
 
 ## Current architecture
 
@@ -57,7 +57,7 @@ The server reads configuration from environment variables with sensible defaults
 Runtime variables used by `apps/server/src/lib/env.ts`:
 
 - `PORT` — HTTP port, defaults to `4000`
-- `DATA_DIR` — LevelDB/session storage directory, defaults to `.data/mermaidflow`
+- `DATA_DIR` — LevelDB/session storage directory, defaults to `.data/arielcharts`
 - `CLEANUP_INTERVAL_MS` — cleanup timer interval
 - `SESSION_TTL_MS` — idle session TTL before cleanup
 - `ALLOWED_ORIGINS` — comma-separated browser/websocket origin allowlist
@@ -86,8 +86,8 @@ This starts:
 You can also run each workspace separately:
 
 ```bash
-pnpm --filter @mermaidflow/server dev
-pnpm --filter @mermaidflow/web dev
+pnpm --filter @arielcharts/server dev
+pnpm --filter @arielcharts/web dev
 ```
 
 ## Build, typecheck, and test
@@ -103,17 +103,17 @@ pnpm test
 Run server-only checks:
 
 ```bash
-pnpm --filter @mermaidflow/server build
-pnpm --filter @mermaidflow/server typecheck
-pnpm --filter @mermaidflow/server test
+pnpm --filter @arielcharts/server build
+pnpm --filter @arielcharts/server typecheck
+pnpm --filter @arielcharts/server test
 ```
 
 Run web-only checks:
 
 ```bash
-pnpm --filter @mermaidflow/web build
-pnpm --filter @mermaidflow/web typecheck
-pnpm --filter @mermaidflow/web test
+pnpm --filter @arielcharts/web build
+pnpm --filter @arielcharts/web typecheck
+pnpm --filter @arielcharts/web test
 ```
 
 ## Core HTTP and websocket contracts

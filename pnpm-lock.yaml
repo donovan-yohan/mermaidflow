@@ -10,7 +10,7 @@ importers:
 
   apps/server:
     dependencies:
-      '@mermaidflow/shared':
+      '@arielcharts/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@modelcontextprotocol/sdk':
@@ -53,6 +53,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@arielcharts/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@codemirror/commands':
         specifier: 6.8.1
         version: 6.8.1
@@ -65,9 +68,6 @@ importers:
       '@codemirror/view':
         specifier: 6.38.6
         version: 6.38.6
-      '@mermaidflow/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       codemirror:
         specifier: 6.0.2
         version: 6.0.2

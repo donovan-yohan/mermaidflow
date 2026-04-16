@@ -1,4 +1,4 @@
-import type { ActivityEvent, ParticipantType } from '@mermaidflow/shared';
+import type { ActivityEvent, ParticipantType } from '@arielcharts/shared';
 
 export function createActivityEvent(input: {
   action: ActivityEvent['action'];

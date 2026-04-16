@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { pathToFileURL } from 'node:url';
+import { APP_NAME } from './lib/constants.js';
 import { healthResponse } from './lib/health.js';
 import { createCorsHeaders, sendEmpty, sendJson } from './lib/http.js';
 import { handleMcpStreamableHttpRequest } from './lib/mcp-server.js';
@@ -135,6 +136,6 @@ if (isMainModule) {
   const app = createApp(env);
 
   app.server.listen(env.port, () => {
-    console.log(`MermaidFlow server listening on http://localhost:${env.port}`);
+    console.log(`${APP_NAME} server listening on http://localhost:${env.port}`);
   });
 }

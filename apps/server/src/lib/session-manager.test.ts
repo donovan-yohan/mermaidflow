@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import type { AwarenessState, Participant } from '@mermaidflow/shared';
+import type { AwarenessState, Participant } from '@arielcharts/shared';
 import * as encoding from 'lib0/encoding';
 import { applyAwarenessUpdate } from 'y-protocols/awareness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -23,7 +23,7 @@ function encodeAwarenessStateUpdate(entries: Array<{ clientId: number; clock: nu
 }
 
 async function createResources() {
-  const dataDir = await mkdtemp(join(tmpdir(), 'mermaidflow-cleanup-'));
+  const dataDir = await mkdtemp(join(tmpdir(), 'arielcharts-cleanup-'));
 
   function createManager() {
     return new SessionManager(new SessionStore(dataDir));

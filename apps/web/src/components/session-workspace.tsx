@@ -1,7 +1,7 @@
 'use client';
 
-import type { ActivityEvent, AwarenessState, Participant } from '@mermaidflow/shared';
-import { APP_NAME } from '@mermaidflow/shared';
+import type { ActivityEvent, AwarenessState, Participant } from '@arielcharts/shared';
+import { APP_NAME } from '@arielcharts/shared';
 import { basicSetup } from 'codemirror';
 import mermaid from 'mermaid';
 import { useEffect, useRef, useState } from 'react';
@@ -17,8 +17,8 @@ const MERMAID_TEXT_KEY = 'mermaid';
 const ACTIVITY_KEY = 'activity';
 const MAX_ACTIVITY_EVENTS = 100;
 const EDIT_ACTIVITY_DEBOUNCE_MS = 900;
-const NAME_STORAGE_KEY = 'mermaidflow.identity.v1';
-const TAB_STORAGE_KEY = 'mermaidflow.tab.v1';
+const NAME_STORAGE_KEY = 'arielcharts.identity.v1';
+const TAB_STORAGE_KEY = 'arielcharts.tab.v1';
 const PARTICIPANT_COLORS = ['#38bdf8', '#a78bfa', '#f472b6', '#34d399', '#f59e0b', '#fb7185'];
 
 const connectionLabels: Record<ConnectionState, string> = {
@@ -430,7 +430,7 @@ export function SessionWorkspace({ sessionId }: { sessionId: string }) {
 
       try {
         await mermaid.parse(mermaidText);
-        const { svg } = await mermaid.render(`mermaidflow-${sessionId}-${renderId}`, mermaidText);
+        const { svg } = await mermaid.render(`arielcharts-${sessionId}-${renderId}`, mermaidText);
         if (!isCancelled) {
           setLastValidSvg(svg);
           setRenderError(null);

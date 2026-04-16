@@ -14,7 +14,7 @@ describe('server integration', () => {
   let port: number;
 
   beforeEach(async () => {
-    dataDir = await mkdtemp(join(tmpdir(), 'mermaidflow-server-'));
+    dataDir = await mkdtemp(join(tmpdir(), 'arielcharts-server-'));
     const env: ServerEnv = {
       port: 0,
       dataDir,
@@ -78,7 +78,7 @@ describe('server integration', () => {
 
   it('supports MCP initialize, tools/list, and tools/call flows over streamable HTTP', async () => {
     const client = new Client({
-      name: 'mermaidflow-server-test',
+      name: 'arielcharts-server-test',
       version: '1.0.0',
     });
 
@@ -92,7 +92,7 @@ describe('server integration', () => {
 
     await client.connect(transport);
 
-    expect(client.getServerVersion()).toEqual({ name: 'MermaidFlow', version: '0.1.0' });
+    expect(client.getServerVersion()).toEqual({ name: 'ArielCharts', version: '0.1.0' });
     expect(client.getServerCapabilities()).toMatchObject({ tools: {} });
 
     const tools = await client.listTools();
