@@ -1,0 +1,4 @@
+{
+  "buildCommand": "cd ../.. && pnpm --filter @mermaidflow/shared build && pnpm --filter @mermaidflow/web build",
+  "framework": "nextjs"
+}
