@@ -1,4 +1,4 @@
-import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { IncomingMessage, OutgoingHttpHeaders, ServerResponse } from 'node:http';
 
 const MAX_BODY_BYTES = 1_048_576; // 1 MB
 
@@ -27,50 +27,50 @@ export function sendJson(
   response: ServerResponse,
   statusCode: number,
   payload: unknown,
-  headers?: Record<string, string>,
+  headers: OutgoingHttpHeaders = {},
 ): void {
   response.statusCode = statusCode;
-  response.setHeader('content-type', 'application/json');
-  if (headers) {
-    for (const [key, value] of Object.entries(headers)) {
-      if (value !== undefined) {
-        response.setHeader(key, value);
-      }
+
+  for (const [key, value] of Object.entries(headers)) {
+    if (value !== undefined) {
+      response.setHeader(key, value);
     }
   }
+
+  response.setHeader('content-type', 'application/json');
   response.end(JSON.stringify(payload));
 }
 
-export function sendEmpty(
-  response: ServerResponse,
-  statusCode: number,
-  headers?: Record<string, string>,
-): void {
+export function sendEmpty(response: ServerResponse, statusCode: number, headers: OutgoingHttpHeaders = {}): void {
   response.statusCode = statusCode;
-  if (headers) {
-    for (const [key, value] of Object.entries(headers)) {
-      if (value !== undefined) {
-        response.setHeader(key, value);
-      }
+
+  for (const [key, value] of Object.entries(headers)) {
+    if (value !== undefined) {
+      response.setHeader(key, value);
     }
   }
+
   response.end();
 }
 
 export function createCorsHeaders(
   origin: string | undefined,
-  allowedOrigins: string[],
-  requestHeaders?: string,
-): Record<string, string> {
-  const headers: Record<string, string> = {
+  allowedOrigins: readonly string[],
+  requestedHeaders: string | undefined,
+): OutgoingHttpHeaders {
+  const isWildcard = allowedOrigins.length === 0 || allowedOrigins.includes('*');
+  const allowOrigin = isWildcard ? '*' : origin;
+
+  const headers: OutgoingHttpHeaders = {
+    'access-control-allow-headers': requestedHeaders?.trim() ? requestedHeaders : 'content-type',
     'access-control-allow-methods': 'POST, OPTIONS',
     'access-control-max-age': '86400',
+    vary: isWildcard ? 'Access-Control-Request-Headers' : 'Origin, Access-Control-Request-Headers',
   };
-  if (requestHeaders) {
-    headers['access-control-allow-headers'] = requestHeaders;
+
+  if (allowOrigin) {
+    headers['access-control-allow-origin'] = allowOrigin;
   }
-  if (origin && (allowedOrigins.length === 0 || allowedOrigins.includes(origin))) {
-    headers['access-control-allow-origin'] = origin;
-  }
+
   return headers;
 }

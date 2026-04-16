@@ -1,0 +1,9 @@
+node_modules
+.data
+.git
+.env
+.env.*
+*.md
+apps/web
+reports
+docs

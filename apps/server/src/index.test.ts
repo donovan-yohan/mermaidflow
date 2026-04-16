@@ -57,6 +57,9 @@ describe('server integration', () => {
     });
 
     expect(emptyResponse.status).toBe(400);
+    expect(emptyResponse.headers.get('access-control-allow-origin')).toBe('http://allowed.test');
+    expect(emptyResponse.headers.get('access-control-allow-methods')).toBe('POST, OPTIONS');
+    expect(emptyResponse.headers.get('access-control-allow-headers')).toBe('content-type');
     await expect(emptyResponse.json()).resolves.toEqual({
       error: 'Expected non-empty string field: tool',
     });
@@ -71,7 +74,25 @@ describe('server integration', () => {
     });
 
     expect(invalidJsonResponse.status).toBe(400);
+    expect(invalidJsonResponse.headers.get('access-control-allow-origin')).toBe('http://allowed.test');
     const invalidJsonPayload = await invalidJsonResponse.json();
     expect(invalidJsonPayload.error).toContain('JSON');
+  });
+
+  it('handles allowed MCP preflight requests', async () => {
+    const response = await fetch(`http://127.0.0.1:${port}/mcp`, {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'http://allowed.test',
+        'access-control-request-headers': 'content-type,x-mermaidflow-client',
+      },
+    });
+
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe('');
+    expect(response.headers.get('access-control-allow-origin')).toBe('http://allowed.test');
+    expect(response.headers.get('access-control-allow-methods')).toBe('POST, OPTIONS');
+    expect(response.headers.get('access-control-allow-headers')).toBe('content-type,x-mermaidflow-client');
+    expect(response.headers.get('access-control-max-age')).toBe('86400');
   });
 });
