@@ -418,7 +418,7 @@ code {
 @media (max-width: 720px) {
   .landing-shell,
   .session-shell {
-    width: min(100vw - 1rem, 100%);
+    width: min(calc(100vw - 1rem), 100%);
   }
 
   .landing-hero,
