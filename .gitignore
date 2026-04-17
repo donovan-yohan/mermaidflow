@@ -142,3 +142,8 @@ vite.config.ts.timestamp-*
 apps/server/.data/
 .vercel
 .env*.local
+
+# Belayer runtime state (config + policies are tracked; runs/artifacts are local)
+.belayer/runs/
+.belayer/artifacts/
+.hermes/
